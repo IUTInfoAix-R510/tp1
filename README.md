@@ -49,6 +49,22 @@ Cette séance pose les fondations pour votre projet fil rouge **SteamCity.io**, 
 
 ### 1.1 Les limites du modèle relationnel
 
+#### 💡 Parallèle SQL → MongoDB : Vocabulaire
+Pour vous repérer, voici la correspondance avec vos connaissances SQL :
+
+| SQL | MongoDB | Exemple |
+|-----|---------|---------|
+| Base de données | Database | `USE mediatheque` → `use mediatheque` |
+| Table | Collection | `CREATE TABLE livres` → `db.createCollection("livres")` |
+| Ligne/Enregistrement | Document | `INSERT INTO...` → `db.livres.insertOne({...})` |
+| Colonne | Champ (Field) | `SELECT titre` → `{titre: 1}` |
+| PRIMARY KEY | _id | Automatique et unique |
+| JOIN | Embedding ou $lookup | Données imbriquées ou agrégation |
+| INDEX | Index | Même concept, syntaxe différente |
+| WHERE | find({critères}) | `WHERE age > 25` → `{age: {$gt: 25}}` |
+
+**Différence majeure :** En SQL, le schéma est défini **avant** l'insertion des données. En MongoDB, le schéma est **flexible** et peut évoluer document par document.
+
 #### Rappel des forces du relationnel
 - **ACID** : Atomicité, Cohérence, Isolation, Durabilité
 - **Normalisation** : Élimination de la redondance
