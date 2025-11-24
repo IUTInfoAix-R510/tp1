@@ -1326,28 +1326,116 @@ Avant de passer à la suite, vérifiez que vous maîtrisez :
 
 ---
 
-## 🎯 Phase 4 : CRUD complet sur cas concret
+## 🎯 Phase 4 : CRUD complet sur cas concret (60 min)
 
-### 4.1 Contexte : Gestion d'une médiathèque
+Cette phase vous permet de mettre en pratique **tous les concepts vus précédemment** sur un cas réel : une médiathèque. Vous allez découvrir comment modéliser des données complexes avec des **documents imbriqués** et des **tableaux**, puis réaliser des opérations avancées.
 
-```javascript
-// Mission : Créer un système de gestion de médiathèque
-// Entités : Livres, Membres, Emprunts
+---
 
-use mediatheque_but3
-db.dropDatabase()  // Repartir de zéro
-use mediatheque_but3
+### 4.1 Contexte et modélisation guidée (15 min)
+
+#### 📖 Le contexte métier
+
+Vous devez créer un système de gestion pour la médiathèque de l'IUT. Le système doit gérer :
+- **Livres** : avec plusieurs exemplaires physiques de chaque titre
+- **Membres** : étudiants qui empruntent des livres
+- **Emprunts** : historique et emprunts en cours
+
+#### 🤔 Réflexion : SQL vs MongoDB
+
+En SQL, vous auriez créé **3 tables séparées** avec des clés étrangères :
+
+```sql
+-- Approche SQL relationnelle
+CREATE TABLE livres (
+    isbn VARCHAR(20) PRIMARY KEY,
+    titre VARCHAR(255),
+    auteur_nom VARCHAR(100),
+    auteur_prenom VARCHAR(100)
+);
+
+CREATE TABLE exemplaires (
+    code VARCHAR(20) PRIMARY KEY,
+    isbn VARCHAR(20) REFERENCES livres(isbn),
+    etat VARCHAR(20),
+    disponible BOOLEAN
+);
+
+CREATE TABLE emprunts (
+    id SERIAL PRIMARY KEY,
+    exemplaire_code VARCHAR(20) REFERENCES exemplaires(code),
+    membre_id VARCHAR(10) REFERENCES membres(id),
+    date_emprunt DATE,
+    date_retour_prevue DATE
+);
 ```
 
-### 4.2 Modélisation et création (20 min)
+**Problème** : Pour afficher un livre avec ses exemplaires et leurs emprunts, il faut faire **plusieurs JOIN** coûteux !
+
+#### ✅ Approche MongoDB : Embedding (embarquement)
+
+En MongoDB, on **embarque les données liées** directement dans le document parent :
 
 ```javascript
-// APPROCHE 1 : Trop relationnelle (à éviter)
-// ❌ Créer 3 collections séparées comme en SQL
+// Un seul document contient TOUT
+{
+    isbn: "978-2-07-036822-8",
+    titre: "Le Petit Prince",
+    auteur: {
+        nom: "Saint-Exupéry",
+        prenom: "Antoine de"
+    },
+    exemplaires: [
+        {
+            code: "LPP-001",
+            etat: "Bon",
+            disponible: true,
+            emprunt_actuel: {
+                membre_id: "M001",
+                date_emprunt: new Date("2024-01-10"),
+                date_retour_prevue: new Date("2024-01-24")
+            }
+        }
+    ]
+}
+```
 
-// APPROCHE 2 : Orientée document (recommandée)
-// ✅ Embarquer les données liées
+**Avantages** :
+- ✅ Lecture ultra-rapide : **un seul `find()`** pour tout récupérer
+- ✅ Structure intuitive : tout est regroupé logiquement
+- ✅ Pas de JOIN nécessaire
 
+**Inconvénient** :
+- ❌ Difficile de faire des statistiques globales sur les emprunts (mais l'agrégation résout ce problème)
+
+#### 📝 Règle de décision : Quand embarquer ?
+
+| Cas | Solution |
+|-----|----------|
+| **1 à N** et N est petit (< 100) | ✅ **Embedding** (ex: 1 livre → 10 exemplaires) |
+| **1 à N** et N est grand (> 1000) | ❌ Références séparées |
+| Données souvent lues ensemble | ✅ **Embedding** |
+| Données modifiées indépendamment | ❌ Références séparées |
+
+#### 🚀 Création de la base de données
+
+```javascript
+// 1. Se connecter et créer la base
+use mediatheque_but3
+
+// 2. Si vous refaites l'exercice, repartir de zéro
+db.dropDatabase()
+use mediatheque_but3
+
+// 3. La base est créée automatiquement dès la première insertion !
+// Pas besoin de CREATE DATABASE comme en SQL
+```
+
+#### 📚 Insertion des livres avec documents imbriqués
+
+Observez bien la structure avant d'exécuter le code :
+
+```javascript
 // Collection livres
 db.livres.insertMany([
     {
