@@ -1082,6 +1082,250 @@ Avant de passer à la suite, vérifiez que vous maîtrisez :
 
 ---
 
+### 3.6 Exercices de suppression de données (15 min)
+
+Dernière opération CRUD : la suppression ! Attention, ces opérations sont **irréversibles** en production.
+
+⚠️ **IMPORTANT** : Pour ces exercices, vous allez supprimer des données. Si vous voulez recommencer, relancez le `insertMany()` de la section 3.3.
+
+#### Exercice 19 : Supprimer un document unique
+**Objectif :** Supprimer l'employé Henri Martin (stagiaire qui a terminé son stage)
+
+**Ce que vous devez pratiquer :** Utilisation de `deleteOne()` pour supprimer un document
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+db.employes.deleteOne({nom: "Martin", prenom: "Henri"})
+
+// Vérifier la suppression
+db.employes.find({nom: "Martin", prenom: "Henri"})
+// Résultat : aucun document
+
+// Compter combien de Martin restent
+db.employes.countDocuments({nom: "Martin"})
+```
+
+**Explications :**
+- `deleteOne()` supprime **un seul document** (le premier qui correspond)
+- La méthode retourne `{acknowledged: true, deletedCount: 1}` si un document a été supprimé
+- Si aucun document ne correspond, `deletedCount` vaut 0 (pas d'erreur)
+- ⚠️ Suppression définitive, aucun moyen de récupérer les données !
+- Équivalent SQL : `DELETE FROM employes WHERE nom = 'Martin' AND prenom = 'Henri' LIMIT 1`
+</details>
+
+---
+
+#### Exercice 20 : Supprimer plusieurs documents
+**Objectif :** Supprimer tous les employés du service "Marketing"
+
+**Ce que vous devez pratiquer :** Utilisation de `deleteMany()` pour supprimer plusieurs documents
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+// Vérifier combien seront supprimés AVANT de supprimer
+db.employes.countDocuments({service: "Marketing"})
+
+// Supprimer
+db.employes.deleteMany({service: "Marketing"})
+
+// Vérifier que le service n'existe plus
+db.employes.distinct("service")
+```
+
+**Explications :**
+- `deleteMany()` supprime **tous les documents** qui correspondent aux critères
+- Toujours vérifier avec `countDocuments()` AVANT de supprimer
+- Le résultat indique `deletedCount` : nombre de documents supprimés
+- Équivalent SQL : `DELETE FROM employes WHERE service = 'Marketing'`
+- ⚠️ Sans critères `deleteMany({})`, TOUTE la collection est supprimée !
+</details>
+
+---
+
+#### Exercice 21 : Suppression conditionnelle
+**Objectif :** Supprimer tous les employés qui gagnent moins de 2700€ (restructuration)
+
+**Ce que vous devez pratiquer :** Suppression avec critère de comparaison
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+// Voir qui sera affecté
+db.employes.find(
+    {salaire: {$lt: 2700}},
+    {nom: 1, prenom: 1, salaire: 1}
+)
+
+// Supprimer
+db.employes.deleteMany({salaire: {$lt: 2700}})
+
+// Vérifier le salaire minimum restant
+db.employes.find().sort({salaire: 1}).limit(1)
+```
+
+**Explications :**
+- On peut utiliser tous les opérateurs de comparaison dans `deleteMany()`
+- Bonne pratique : toujours faire un `find()` avec les mêmes critères AVANT de supprimer
+- Permet de vérifier qu'on va supprimer les bons documents
+</details>
+
+---
+
+#### Exercice 22 : Supprimer avec critère sur tableau
+**Objectif :** Supprimer tous les employés qui n'ont PAS de compétences enregistrées
+
+**Ce que vous devez pratiquer :** Suppression avec `$exists` sur un champ optionnel
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+// Voir combien d'employés n'ont pas de compétences
+db.employes.countDocuments({competences: {$exists: false}})
+
+// Les afficher
+db.employes.find(
+    {competences: {$exists: false}},
+    {nom: 1, prenom: 1, service: 1}
+)
+
+// Supprimer
+db.employes.deleteMany({competences: {$exists: false}})
+```
+
+**Explications :**
+- `{$exists: false}` cible les documents où le champ n'existe pas du tout
+- Différent de `{competences: []}` qui cible un tableau vide
+- Utile pour nettoyer les documents incomplets
+</details>
+
+---
+
+#### Exercice 23 : Supprimer toute une collection
+**Objectif :** Supprimer complètement la collection `employes` pour repartir de zéro
+
+**Ce que vous devez pratiquer :** Utilisation de `drop()` pour supprimer une collection
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+// Méthode 1 : Supprimer tous les documents (la collection reste)
+db.employes.deleteMany({})
+
+// Vérifier : la collection existe toujours mais est vide
+db.employes.countDocuments()  // 0
+
+// Méthode 2 : Supprimer la collection entière (recommandé)
+db.employes.drop()
+
+// Vérifier : la collection n'existe plus
+show collections  // employes n'apparaît plus
+```
+
+**Explications :**
+- `deleteMany({})` supprime tous les documents mais garde la structure (indexes, etc.)
+- `drop()` supprime la collection complètement (documents + indexes + métadonnées)
+- `drop()` est plus rapide et plus propre pour repartir de zéro
+- ⚠️ `drop()` supprime aussi tous les index créés !
+- Équivalent SQL : `DROP TABLE employes`
+
+**Recréer les données pour la suite :**
+```javascript
+// Relancer l'insertion de la section 3.3
+db.employes.insertMany([
+    {nom: "Martin", prenom: "Alice", age: 28, service: "IT", salaire: 3500},
+    {nom: "Dubois", prenom: "Bob", age: 35, service: "RH", salaire: 3200},
+    // ... etc
+])
+```
+</details>
+
+---
+
+#### 🎯 Exercice bonus : Suppression "intelligente" (soft delete)
+**Objectif :** Au lieu de supprimer définitivement un employé, le marquer comme "inactif" (approche professionnelle)
+
+**Ce que vous devez pratiquer :** Alternative à la suppression : mise à jour plutôt que delete
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+// ❌ Mauvaise pratique : supprimer définitivement
+// db.employes.deleteOne({nom: "Dubois", prenom: "Bob"})
+
+// ✅ Bonne pratique : "soft delete" (suppression douce)
+db.employes.updateOne(
+    {nom: "Dubois", prenom: "Bob"},
+    {
+        $set: {
+            actif: false,
+            date_desactivation: new Date(),
+            raison: "Démission"
+        }
+    }
+)
+
+// Requêtes normales : exclure les inactifs
+db.employes.find({actif: {$ne: false}})
+// Ou plus explicite :
+db.employes.find({$or: [{actif: true}, {actif: {$exists: false}}]})
+
+// Voir les employés désactivés (pour audit/historique)
+db.employes.find({actif: false})
+```
+
+**Explications :**
+- En production, on évite souvent de supprimer définitivement
+- Raisons : audit, historique, contraintes légales (RGPD), possibilité d'annuler
+- Le "soft delete" marque les données comme inactives au lieu de les supprimer
+- Permet de garder l'historique complet de l'entreprise
+- Nécessite d'ajouter `{actif: true}` ou `{actif: {$ne: false}}` dans toutes les requêtes
+
+**Avantages du soft delete :**
+- Traçabilité complète
+- Possibilité de restaurer
+- Conservation pour audits et statistiques
+- Respect des obligations légales
+
+**Inconvénients :**
+- Base de données plus volumineuse
+- Requêtes légèrement plus complexes
+- Nécessite une gestion de l'archivage
+</details>
+
+---
+
+#### ✅ Auto-évaluation
+
+Avant de passer à la suite, vérifiez que vous maîtrisez :
+- [ ] Supprimer un document avec `deleteOne()`
+- [ ] Supprimer plusieurs documents avec `deleteMany()`
+- [ ] Utiliser des critères de comparaison dans les suppressions
+- [ ] Vérifier AVANT de supprimer avec `find()` ou `countDocuments()`
+- [ ] Supprimer une collection entière avec `drop()`
+- [ ] Comprendre la différence entre `deleteMany({})` et `drop()`
+- [ ] Connaître l'approche "soft delete" pour la production
+
+⚠️ **DANGER ABSOLU** :
+- `db.employes.deleteMany({})` supprime TOUS les documents
+- `db.dropDatabase()` supprime TOUTE la base de données
+- **Aucun retour en arrière possible !**
+
+💡 **Bonne pratique professionnelle :**
+1. Toujours faire un `find()` avec les mêmes critères AVANT `delete()`
+2. Vérifier le `countDocuments()` pour savoir combien seront supprimés
+3. En production, préférer le "soft delete" (marqueur `actif: false`)
+4. Faire des backups avant toute suppression massive
+
+---
+
 ## 🎯 Phase 4 : CRUD complet sur cas concret
 
 ### 4.1 Contexte : Gestion d'une médiathèque
