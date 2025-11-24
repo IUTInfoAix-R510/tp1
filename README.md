@@ -307,6 +307,32 @@ mongosh --version
 5. Coller la connection string
 ```
 
+#### ⚠️ Problèmes fréquents de connexion
+
+**Problème 5 : "Authentication failed" dans Compass**
+- **Cause :** Mot de passe incorrect ou caractères spéciaux non échappés
+- **Solution :**
+  - Vérifier que vous avez bien remplacé `<password>` par votre mot de passe réel
+  - Si le mot de passe contient des caractères spéciaux (@, %, &, etc.), les encoder en URL
+  - Exemple : `p@ssw0rd` devient `p%40ssw0rd`
+
+**Problème 6 : "Connection timeout" ou "Network error"**
+- **Cause :** IP non autorisée ou firewall de l'IUT
+- **Solution :**
+  - Vérifier dans Atlas → Network Access que 0.0.0.0/0 est bien présent
+  - Si à l'IUT : demander à l'enseignant de vérifier le firewall
+  - En dernier recours : utiliser un partage de connexion 4G temporaire
+
+**Problème 7 : mongosh n'est pas reconnu (Windows)**
+- **Cause :** Le PATH Windows n'est pas à jour
+- **Solution :**
+  - Fermer et rouvrir le terminal
+  - Ou utiliser le shell intégré dans Compass (en bas de l'interface)
+
+**Problème 8 : "No databases visible" après connexion**
+- **Cause :** C'est NORMAL ! MongoDB est vide au départ
+- **Solution :** Passer à la Phase 3 pour créer votre première base
+
 ### ✅ Point de validation #1
 
 **Checklist :**
@@ -392,31 +418,61 @@ db.personnes.insertOne({
     actif: true
 })
 
-// Observer la flexibilité
-db.personnes.find().pretty()
+// Observer la flexibilité du schéma
+db.personnes.find()
+// Note : .pretty() n'est plus nécessaire dans mongosh v1+, l'affichage est automatiquement formaté
 
-// 4. Types de données BSON
+// 4. Types de données utiles
 db.personnes.insertOne({
     nom: "Diana",
+    age: 24,
     date_naissance: new Date("1999-05-15"),          // Date
-    salaire: NumberDecimal("2500.50"),               // Decimal128
-    cv_pdf: BinData(0, "..."),                      // Binary
-    coordonnees: {
-        type: "Point",
-        coordinates: [5.4, 43.5]                     // GeoJSON
+    salaire: 2500.50,                                 // Number
+    en_formation: true,                               // Boolean
+    competences: ["Python", "SQL"],                   // Array
+    adresse: {                                        // Objet imbriqué
+        ville: "Aix-en-Provence",
+        code_postal: "13100"
     },
-    projets_ids: [
-        ObjectId("507f1f77bcf86cd799439011")        // ObjectId
-    ],
-    metadata: null                                   // Null
+    mentor_id: null                                   // Null (pas encore assigné)
 })
 
-// Comprendre ObjectId
+// 💡 Comprendre ObjectId (l'identifiant unique)
 let doc = db.personnes.findOne({nom: "Alice"})
-doc._id                           // ObjectId("...")
-doc._id.getTimestamp()           // Date de création !
-doc._id.toString()               // String version
+print("Document complet :")
+printjson(doc)
+
+print("\nL'ObjectId :")
+print(doc._id)                           // ObjectId("...")
+
+print("\nDate de création extraite de l'ObjectId :")
+print(doc._id.getTimestamp())           // Date de création automatique !
+
+// ⚠️ Point important : l'_id est AUTOMATIQUEMENT généré si vous ne le fournissez pas
 ```
+
+**📝 Exercice rapide de validation :**
+Avant de continuer, testez votre compréhension en insérant un nouveau document avec :
+- Votre prénom
+- Votre âge
+- Un tableau de 3 compétences informatiques
+- Un objet "contact" avec email et téléphone
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+db.personnes.insertOne({
+    nom: "VotreNom",
+    age: 21,
+    competences: ["Java", "JavaScript", "PostgreSQL"],
+    contact: {
+        email: "votre.nom@etu.univ-amu.fr",
+        telephone: "0612345678"
+    }
+})
+```
+</details>
 
 ### 3.3 Requêtes basiques
 
@@ -779,10 +835,12 @@ db.livres.find({
 })
 
 // 5. Top 5 des livres les plus empruntés
-db.livres.find()
+db.livres.find(
+    {},
+    {titre: 1, nombre_emprunts_total: 1}  // Projection : sélection des champs
+)
     .sort({nombre_emprunts_total: -1})
     .limit(5)
-    .projection({titre: 1, nombre_emprunts_total: 1})
 
 // 6. Membres avec emprunts en cours
 db.membres.find({
@@ -816,6 +874,63 @@ db.livres.aggregate([
     }}
 ])
 ```
+
+#### 💡 Points clés à retenir sur ces requêtes
+
+**Notation pointée pour les documents imbriqués :**
+```javascript
+// Pour accéder à un champ dans un tableau ou objet imbriqué, utiliser la notation pointée
+"exemplaires.disponible"          // Champ dans un tableau d'objets
+"auteur.nom"                       // Champ dans un objet imbriqué
+"contact.email"                    // Idem
+```
+
+**Opérateur $ pour les tableaux :**
+```javascript
+// $ dans la projection retourne SEULEMENT le premier élément qui match
+{titre: 1, "exemplaires.$": 1}
+
+// Pour obtenir tous les éléments, ne pas utiliser $
+{titre: 1, exemplaires: 1}
+```
+
+**⚠️ Erreur courante : Oublier les guillemets**
+```javascript
+// ❌ FAUX - provoque une erreur de syntaxe
+db.livres.find({exemplaires.disponible: true})
+
+// ✅ CORRECT - guillemets obligatoires pour la notation pointée
+db.livres.find({"exemplaires.disponible": true})
+```
+
+#### ✅ Point de validation #2
+
+Avant de passer aux opérations transactionnelles, vérifiez que vous savez :
+- [ ] Créer des requêtes avec notation pointée sur objets imbriqués
+- [ ] Utiliser les opérateurs de comparaison ($lt, $gt, $gte, $lte)
+- [ ] Faire des projections pour sélectionner les champs
+- [ ] Trier et limiter les résultats
+- [ ] Requêter dans des tableaux avec $in
+
+**📝 Mini-exercice :** Écrivez une requête qui trouve tous les livres de la catégorie "Fantasy" publiés après 1990, triés par note décroissante, en affichant seulement le titre et la note.
+
+<details>
+<summary>💡 Solution</summary>
+
+```javascript
+db.livres.find(
+    {
+        categories: "Fantasy",
+        "publication.annee": {$gt: 1990}
+    },
+    {
+        titre: 1,
+        note_moyenne: 1,
+        _id: 0
+    }
+).sort({note_moyenne: -1})
+```
+</details>
 
 ### 4.4 Opérations transactionnelles
 
@@ -1023,7 +1138,7 @@ db.livres.aggregate([
 
 
 // EXERCICE 2 : Requête complexe
-// Trouver tous les livres Fantasy disponibles, 
+// Trouver tous les livres Fantasy disponibles,
 // publiés après 1990, avec une note > 4
 // Trier par nombre d'emprunts décroissant
 
@@ -1044,6 +1159,225 @@ db.livres.aggregate([
 // - Recherche par disponibilité
 
 // Vos commandes :
+
+```
+
+---
+
+### 📝 Corrigés des exercices
+
+<details>
+<summary>💡 Corrigé Exercice 1 : Collection "evenements"</summary>
+
+```javascript
+db.evenements.insertMany([
+    {
+        type: "conference",
+        titre: "La littérature française au XXIe siècle",
+        date: new Date("2024-02-15T18:00:00"),
+        duree_minutes: 90,
+        lieu: "Salle polyvalente",
+        intervenant: {
+            nom: "Dupont",
+            prenom: "Marie",
+            bio: "Professeure de littérature à l'université",
+            contact: "marie.dupont@univ.fr"
+        },
+        capacite_max: 30,
+        inscriptions: [
+            {
+                membre_id: "M001",
+                date_inscription: new Date("2024-01-20")
+            },
+            {
+                membre_id: "M002",
+                date_inscription: new Date("2024-01-22")
+            }
+        ],
+        nombre_inscrits: 2,
+        statut: "ouvert",  // ouvert, complet, annulé, terminé
+        theme: ["littérature", "culture"]
+    },
+    {
+        type: "atelier",
+        titre: "Initiation à l'écriture créative",
+        date: new Date("2024-02-20T14:00:00"),
+        duree_minutes: 120,
+        lieu: "Salle 3",
+        intervenant: {
+            nom: "Martin",
+            prenom: "Lucas",
+            bio: "Écrivain et formateur"
+        },
+        capacite_max: 15,
+        inscriptions: [],
+        nombre_inscrits: 0,
+        statut: "ouvert",
+        materiel_requis: ["Cahier", "Stylo"],
+        theme: ["écriture", "créativité"]
+    },
+    {
+        type: "exposition",
+        titre: "Illustrations de contes classiques",
+        date_debut: new Date("2024-03-01"),
+        date_fin: new Date("2024-03-31"),
+        lieu: "Hall principal",
+        artiste: {
+            nom: "Bernard",
+            prenom: "Sophie",
+            site_web: "www.sophie-illustre.fr"
+        },
+        acces_libre: true,
+        theme: ["art", "jeunesse", "illustration"]
+    }
+])
+
+// Vérification
+db.evenements.find()
+```
+
+**Points clés de la modélisation :**
+- Différents types d'événements dans la même collection (flexibilité)
+- Objets imbriqués pour les informations de l'intervenant
+- Tableau d'inscriptions embarqué (jusqu'à 30 max)
+- Champs optionnels selon le type (materiel_requis, date_fin, etc.)
+</details>
+
+<details>
+<summary>💡 Corrigé Exercice 2 : Requête complexe</summary>
+
+```javascript
+db.livres.find(
+    {
+        categories: "Fantasy",
+        "publication.annee": {$gt: 1990},
+        note_moyenne: {$gt: 4},
+        "exemplaires.disponible": true
+    },
+    {
+        titre: 1,
+        "auteur.nom": 1,
+        "auteur.prenom": 1,
+        note_moyenne: 1,
+        nombre_emprunts_total: 1
+    }
+).sort({nombre_emprunts_total: -1})
+
+// ⚠️ Note : Cette requête vérifie qu'AU MOINS UN exemplaire est disponible
+// Si vous voulez afficher SEULEMENT les exemplaires disponibles,
+// il faudrait utiliser l'agrégation avec $filter
+```
+
+**Explication :**
+- `categories: "Fantasy"` : MongoDB cherche "Fantasy" dans le tableau
+- `{$gt: 1990}` : Strictement supérieur (après 1990)
+- `{$gt: 4}` : Note strictement supérieure à 4
+- `sort({...: -1})` : -1 = décroissant, 1 = croissant
+</details>
+
+<details>
+<summary>💡 Corrigé Exercice 3 : Fonction taux d'occupation</summary>
+
+```javascript
+function calculerTauxOccupation() {
+    // Méthode 1 : Avec agrégation (recommandée)
+    let stats = db.livres.aggregate([
+        {$unwind: "$exemplaires"},
+        {$group: {
+            _id: null,
+            total: {$sum: 1},
+            empruntes: {
+                $sum: {
+                    $cond: [{$eq: ["$exemplaires.disponible", false]}, 1, 0]
+                }
+            }
+        }},
+        {$project: {
+            total: 1,
+            empruntes: 1,
+            taux_occupation: {
+                $multiply: [
+                    {$divide: ["$empruntes", "$total"]},
+                    100
+                ]
+            }
+        }}
+    ]).toArray()[0];
+
+    print(`=== Statistiques de la médiathèque ===`);
+    print(`Total exemplaires : ${stats.total}`);
+    print(`Exemplaires empruntés : ${stats.empruntes}`);
+    print(`Taux d'occupation : ${stats.taux_occupation.toFixed(2)}%`);
+
+    return stats;
+}
+
+// Test de la fonction
+calculerTauxOccupation();
+
+// Méthode 2 : Plus simple mais moins performante
+function calculerTauxOccupationSimple() {
+    let total = 0;
+    let empruntes = 0;
+
+    db.livres.find().forEach(livre => {
+        livre.exemplaires.forEach(ex => {
+            total++;
+            if (!ex.disponible) empruntes++;
+        });
+    });
+
+    let taux = (empruntes / total) * 100;
+    print(`Taux d'occupation : ${taux.toFixed(2)}%`);
+    return taux;
+}
+```
+
+**Points clés :**
+- `$unwind` : "Déroule" le tableau exemplaires (1 doc = 1 exemplaire)
+- `$cond` : Condition if/else dans l'agrégation
+- La méthode 1 (agrégation) est plus performante pour de gros volumes
+</details>
+
+<details>
+<summary>💡 Corrigé Exercice 4 : Index d'optimisation</summary>
+
+```javascript
+// 1. Index sur ISBN (recherche exacte très fréquente)
+db.livres.createIndex({isbn: 1})
+// Justification : L'ISBN est unique et souvent utilisé pour identifier un livre
+
+// 2. Index sur les catégories (recherches fréquentes)
+db.livres.createIndex({categories: 1})
+// Justification : Recherches par genre (Fantasy, Science-Fiction, etc.)
+
+// 3. Index sur la disponibilité des exemplaires
+db.livres.createIndex({"exemplaires.disponible": 1})
+// Justification : Requête fréquente pour trouver les livres disponibles
+
+// 4. Index composé pour les recherches combinées
+db.livres.createIndex({categories: 1, note_moyenne: -1})
+// Justification : Rechercher dans une catégorie et trier par note
+
+// 5. Index sur les membres pour les emprunts
+db.membres.createIndex({_id: 1})  // Existe déjà par défaut
+db.membres.createIndex({"emprunts_en_cours.livre_isbn": 1})
+// Justification : Trouver rapidement les emprunts d'un membre
+
+// Vérifier les index créés
+db.livres.getIndexes()
+db.membres.getIndexes()
+
+// Analyser les performances d'une requête avec explain()
+db.livres.find({categories: "Fantasy"}).explain("executionStats")
+```
+
+**Principes d'indexation :**
+- Indexer les champs utilisés dans `find()` et `sort()`
+- Index composés pour les requêtes combinées fréquentes
+- Attention : trop d'index ralentit les écritures (INSERT/UPDATE)
+- `explain()` permet de vérifier qu'un index est bien utilisé
+</details>
 
 ```
 
