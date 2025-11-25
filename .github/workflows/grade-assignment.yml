@@ -1,0 +1,123 @@
+name: Grade MongoDB Assignment
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'playground-tp1.mongodb.js'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd .github/scripts
+          npm install
+
+      - name: Wait for MongoDB
+        run: |
+          echo "Waiting for MongoDB to be ready..."
+          for i in {1..30}; do
+            if mongosh --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
+              echo "MongoDB is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run grading script
+        id: grade
+        run: |
+          cd .github/scripts
+          node grade.js ../../playground-tp1.mongodb.js
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+
+      - name: Create grade report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grade-report
+          path: .github/scripts/grade-report.json
+
+      - name: Comment PR with grade
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+
+            const body = `## 📊 Résultat de la notation automatique
+
+            **Note totale : ${report.totalScore}/100**
+
+            ### Détails
+
+            #### ✅ Structure (${report.structure.score}/${report.structure.maxScore} points)
+            ${report.structure.details.map(d => `- ${d.check}: ${d.passed ? '✅' : '❌'} ${d.message}`).join('\n')}
+
+            #### 📝 Analyse statique (${report.static.score}/${report.static.maxScore} points)
+            - Exercices complétés: ${report.static.completedExercises}/49
+            - Mots-clés corrects: ${report.static.correctKeywords}%
+
+            #### 🧪 Tests automatiques (${report.tests.score}/${report.tests.maxScore} points)
+            ${report.tests.results.map(t => `- Exercice ${t.number}: ${t.passed ? '✅' : '❌'} ${t.message}`).join('\n')}
+
+            ${report.totalScore >= 80 ? '🎉 Excellent travail !' : report.totalScore >= 60 ? '👍 Bon travail, quelques améliorations possibles.' : '⚠️ Travail à améliorer.'}
+
+            ---
+            *Cette note est indicative. La note finale sera déterminée par l'enseignant.*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Update commit status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+
+            const state = report.totalScore >= 50 ? 'success' : 'failure';
+            const description = `Note: ${report.totalScore}/100`;
+
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: state,
+              description: description,
+              context: 'Auto-grading'
+            });

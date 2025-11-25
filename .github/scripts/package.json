@@ -1,0 +1,14 @@
+{
+  "name": "mongodb-tp-grader",
+  "version": "1.0.0",
+  "description": "Automatic grading system for MongoDB TP",
+  "type": "module",
+  "scripts": {
+    "grade": "node grade.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0",
+    "acorn": "^8.11.3",
+    "acorn-walk": "^8.3.2"
+  }
+}

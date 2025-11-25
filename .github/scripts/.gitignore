@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+
+# Generated reports
+test-report.json
+grade-report.json
+
+# Logs
+*.log
+npm-debug.log*
