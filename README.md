@@ -2097,8 +2097,8 @@ En MongoDB, on **embarque les données liées** directement dans le document par
     isbn: "978-2-07-036822-8",
     titre: "Le Petit Prince",
     auteur: {
-        nom: "Saint-Exupéry",
-        prenom: "Antoine de"
+        nom: "de Saint-Exupéry",
+        prenom: "Antoine"
     },
     exemplaires: [
         {
@@ -2157,8 +2157,8 @@ db.livres.insertMany([
         isbn: "978-2-07-036822-8",
         titre: "Le Petit Prince",
         auteur: {
-            nom: "Saint-Exupéry",
-            prenom: "Antoine de",
+            nom: "de Saint-Exupéry",
+            prenom: "Antoine",
             nationalite: "Française"
         },
         publication: {
@@ -2295,8 +2295,8 @@ Prenons le temps d'analyser ce que nous venons d'insérer :
 **1. Objets imbriqués (nested objects)**
 ```javascript
 auteur: {
-    nom: "Saint-Exupéry",
-    prenom: "Antoine de",
+    nom: "de Saint-Exupéry",
+    prenom: "Antoine",
     nationalite: "Française"
 }
 // ✅ Un seul auteur par livre → objet simple
@@ -2408,8 +2408,11 @@ Vérifiez votre compréhension avant de continuer :
 <summary>💡 Réponses</summary>
 
 1. **Objet imbriqué** = 1 seule valeur (ex: `auteur`). **Tableau d'objets** = plusieurs valeurs (ex: `exemplaires`)
+
 2. Parce qu'on lit souvent un livre avec tous ses exemplaires → une seule requête au lieu de JOIN
+
 3. Par le nom de la collection : `db.livres.insertMany()` insère dans "livres", `db.membres.insertMany()` dans "membres"
+
 </details>
 
 **Checklist :**
