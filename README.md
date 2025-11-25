@@ -639,15 +639,16 @@ Enter password: ************
 **3. Vérification**
 
 Si la connexion réussit, vous voyez :
+
 ```
-Current Mongosh Log ID: 65abc123def456789
-Connecting to: mongodb+srv://...
-Using MongoDB: 7.0.5
-Using Mongosh: 2.1.1
+Current Mongosh Log ID:	6925728bf10e4a985d9dc29c
+Connecting to:		mongodb+srv://<credentials>@cluster0.ltkb5jb.mongodb.net/?appName=mongosh+2.5.9
+Using MongoDB:		8.0.16 (API Version 1)
+Using Mongosh:		2.5.9
 
-For mongosh info see: https://docs.mongodb.com/mongodb-shell/
+For mongosh info see: https://www.mongodb.com/docs/mongodb-shell/
 
-Atlas atlas-xxxxx-shard-0 [primary] test>
+Atlas atlas-prqm4y-shard-0 [primary] test> 
 ```
 
 💡 Le prompt `test>` signifie que vous êtes connecté à la base "test" par défaut.
@@ -657,13 +658,14 @@ Atlas atlas-xxxxx-shard-0 [primary] test>
 ```javascript
 // Afficher la version de MongoDB
 db.version()
-// → 7.0.5
+// → 8.0.16
 
 // Lister les bases de données
 show dbs
-// → admin   41 KB
-// → config  73 KB
-// → local  10.5 GB
+// → sample_mflix  113.63 MiB
+// → sample_sales   72.00 KiB
+// → admin         360.00 KiB
+// → local           6.45 GiB
 
 // Afficher la base actuelle
 db
@@ -700,7 +702,7 @@ exit
    Résultat :
    ┌─────────────────────────────────────────┐
    │ MongoDB for VS Code                     │
-   │ by MongoDB                   ⭐⭐⭐⭐⭐ │
+   │ by MongoDB                              │
    │ 5M+ downloads                           │
    │ [Install]                               │
    └─────────────────────────────────────────┘
@@ -831,7 +833,7 @@ db.dropDatabase()
 
 **Si tous les tests passent** → Vous êtes prêt pour la Phase 3 ! 🎉
 
-**Si un test échoue** → Relire la section troubleshooting ci-dessus ou demander de l'aide
+**Si un test échoue** → Relire la section troubleshooting ci-dessus ou demander de l'aide à l'enseignant.
 
 ---
 
