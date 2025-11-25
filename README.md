@@ -31,6 +31,74 @@ Cette séance pose les fondations pour votre projet fil rouge, une plateforme Io
 
 ---
 
+## Création de votre fork du TP
+
+La première chose que vous allez faire est de créer un fork personnel du présent dépôt. Pour ce faire, rendez-vous sur le lien suivant :
+
+<https://classroom.github.com/a/>
+
+GitHub va vous créer un dépôt contenant un fork du dépôt 'IUTInfoAix-R510/Tp1' et s'appelant 'IUTInfoAix-R510/Tp1-votreUsername'. Vous apparaîtrez automatiquement comme contributeur de ce projet pour y pousser votre travail.
+
+## Ouverture de GitHub Codespace
+
+Une fois votre fork créé, vous pouvez ouvrir le projet directement dans GitHub Codespace :
+
+1. Rendez-vous sur votre dépôt GitHub (`IUTInfoAix-R510/Tp1-votreUsername`)
+2. Cliquez sur le bouton vert **Code**
+3. Sélectionnez l'onglet **Codespaces**
+4. Cliquez sur **Create codespace on main**
+
+GitHub va créer un environnement de développement complet dans le cloud. Après quelques instants, vous aurez accès à VS Code directement dans votre navigateur avec :
+- Node.js et toutes les dépendances déjà installées
+- L'extension MongoDB fonctionnelle
+- Accès à mongosh
+
+Pour ouvrir le playgroung de ce TP :
+- Dans l'explorateur de fichiers (à gauche), cliquez sur le fichier `playground-tp1.mongodb.js`
+- Le notebook s'ouvrira et vous pourrez exécuter vos requêtes
+
+**Note** : GitHub offre 60 heures gratuites de Codespace par mois pour les comptes personnels.
+
+---
+
+## 📝 Rendu du travail
+
+### Utilisation du fichier playground
+
+Pour faciliter le rendu de votre travail, un fichier `playground-tp1.mongodb.js` est mis à votre disposition. Ce fichier contient tous les exercices du TP organisés par phase et par section.
+
+#### 🚀 Comment utiliser le playground
+
+1. **Personnalisation initiale**
+   - Ouvrez le fichier `playground-tp1.mongodb.js`
+   - Remplissez vos informations en haut du fichier (nom, prénom, date, groupe)
+   - Remplacez `tp_mongodb_prenom_nom` par votre nom personnalisé (ex: `tp_mongodb_alice_martin`)
+
+2. **Pendant le TP**
+   - Naviguez vers la section correspondant à l'exercice en cours
+   - Chaque exercice a son emplacement dédié avec l'objectif rappelé
+   - Écrivez votre code sous le commentaire `// Votre réponse :`
+   - Testez vos requêtes directement dans VS Code avec l'extension MongoDB
+
+3. **Avant de rendre**
+   - Vérifiez la checklist finale à la fin du fichier
+   - Assurez-vous que toutes vos requêtes fonctionnent
+   - Ajoutez des commentaires pour expliquer les requêtes complexes
+   - Vérifiez qu'il n'y a pas d'erreurs de syntaxe
+
+4. **Méthode de rendu**
+   - Committez et poussez votre fichier `playground-tp1.mongodb.js` complété
+   - Le rendu se fait sur le repo GitHub créé en acceptant le devoir (voir section "Création de votre fork du TP")
+   - Date limite : voir la date indiquée sur GitHub Classroom
+
+#### 💡 Conseils
+- Sauvegardez régulièrement votre travail et pensez à versionner après chaque exercice
+- N'oubliez pas de copier-coller les données d'insertion fournies dans le README (sections 3.3 et 4.1)
+- Utilisez la zone "Notes et remarques" pour noter vos questions ou difficultés
+- Les exercices 1 à 49 sont tous à faire.
+
+---
+
 ## ⏰ Planning de la séance
 
 | Horaire | Durée | Activité |
