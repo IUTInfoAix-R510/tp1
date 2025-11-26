@@ -9,6 +9,13 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+# Permissions required for commit status and PR comments
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: write
+  issues: write
+
 jobs:
   grade:
     runs-on: ubuntu-latest
@@ -57,21 +64,52 @@ jobs:
           node grade.js ../../playground-tp1.mongodb.js
         env:
           MONGODB_URI: mongodb://localhost:27017
+        continue-on-error: true
 
-      - name: Create grade report
+      - name: Create grade report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: grade-report
           path: .github/scripts/grade-report.json
+          if-no-files-found: ignore
+
+      - name: Display grade summary
+        if: always()
+        run: |
+          if [ -f .github/scripts/grade-report.json ]; then
+            echo "📊 GRADING RESULTS"
+            echo "=================="
+            cat .github/scripts/grade-report.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          print(f\"Total Score: {data.get('totalScore', 'N/A')}/100\")
+          print(f\"Structure: {data.get('structure', {}).get('score', 'N/A')}/{data.get('structure', {}).get('maxScore', 10)}\")
+          print(f\"Static Analysis: {data.get('static', {}).get('score', 'N/A')}/{data.get('static', {}).get('maxScore', 40)}\")
+          print(f\"Tests: {data.get('tests', {}).get('score', 'N/A')}/{data.get('tests', {}).get('maxScore', 50)}\")
+          print(f\"Completed Exercises: {data.get('static', {}).get('completedExercises', 'N/A')}/49\")
+          for fb in data.get('feedback', []):
+              print(f\"  - {fb}\")
+          "
+          else
+            echo "❌ No grade report found"
+          fi
 
       - name: Comment PR with grade
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
             const fs = require('fs');
-            const report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not read grade report:', e.message);
+              return;
+            }
 
             const body = `## 📊 Résultat de la notation automatique
 
@@ -80,14 +118,14 @@ jobs:
             ### Détails
 
             #### ✅ Structure (${report.structure.score}/${report.structure.maxScore} points)
-            ${report.structure.details.map(d => `- ${d.check}: ${d.passed ? '✅' : '❌'} ${d.message}`).join('\n')}
+            ${report.structure.details.map(d => \`- \${d.check}: \${d.passed ? '✅' : '❌'} \${d.message}\`).join('\n')}
 
             #### 📝 Analyse statique (${report.static.score}/${report.static.maxScore} points)
             - Exercices complétés: ${report.static.completedExercises}/49
             - Mots-clés corrects: ${report.static.correctKeywords}%
 
             #### 🧪 Tests automatiques (${report.tests.score}/${report.tests.maxScore} points)
-            ${report.tests.results.map(t => `- Exercice ${t.number}: ${t.passed ? '✅' : '❌'} ${t.message}`).join('\n')}
+            ${report.tests.results ? report.tests.results.map(t => \`- Exercice \${t.number}: \${t.passed ? '✅' : '❌'} \${t.message}\`).join('\n') : 'Tests not executed'}
 
             ${report.totalScore >= 80 ? '🎉 Excellent travail !' : report.totalScore >= 60 ? '👍 Bon travail, quelques améliorations possibles.' : '⚠️ Travail à améliorer.'}
 
@@ -105,19 +143,32 @@ jobs:
       - name: Update commit status
         if: always()
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
             const fs = require('fs');
-            const report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync('.github/scripts/grade-report.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not read grade report:', e.message);
+              return;
+            }
 
             const state = report.totalScore >= 50 ? 'success' : 'failure';
             const description = `Note: ${report.totalScore}/100`;
 
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: state,
-              description: description,
-              context: 'Auto-grading'
-            });
+            try {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: context.sha,
+                state: state,
+                description: description,
+                context: 'Auto-grading'
+              });
+            } catch (e) {
+              console.log('Could not create commit status:', e.message);
+              console.log('This may be due to repository permissions.');
+            }
